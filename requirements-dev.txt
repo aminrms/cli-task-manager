@@ -1,0 +1,24 @@
+# Production dependencies
+rich>=12.0.0,<14.0.0
+jdatetime>=4.1.0,<6.0.0
+
+# Development dependencies
+black>=22.0.0
+flake8>=4.0.0
+mypy>=0.900
+pytest>=7.0.0
+pytest-cov>=3.0.0
+pytest-mock>=3.6.0
+pre-commit>=2.15.0
+isort>=5.10.0
+
+# Documentation
+sphinx>=4.0.0
+sphinx-rtd-theme>=1.0.0
+
+# Build and distribution
+build>=0.7.0
+twine>=3.8.0
+
+# Optional: for creating executables
+pyinstaller>=4.10

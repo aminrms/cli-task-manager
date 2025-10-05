@@ -159,8 +159,137 @@ class InputHandler:
         except KeyboardInterrupt:
             return None
     
+    def get_export_options(self) -> Optional[Dict[str, Any]]:
+        """Get export options including path, format, and columns"""
+        try:
+            console.rule("[bold cyan]📤 Export Configuration[/bold cyan]")
+            
+            # Get export path with validation
+            while True:
+                path = Prompt.ask(
+                    "📁 Enter export file path",
+                    default="./exported_tasks.csv"
+                )
+                if not path.strip():
+                    console.print("[red]❌ Path cannot be empty[/red]")
+                    continue
+                
+                # Validate path and create directory if needed
+                from pathlib import Path
+                export_path = Path(path.strip())
+                
+                try:
+                    # Create parent directory if it doesn't exist
+                    export_path.parent.mkdir(parents=True, exist_ok=True)
+                    
+                    # Test write permissions
+                    test_file = export_path.parent / f"test_write_{export_path.name}.tmp"
+                    test_file.touch()
+                    test_file.unlink()
+                    
+                    break  # Path is valid
+                    
+                except (OSError, PermissionError) as e:
+                    console.print(f"[red]❌ Cannot access path {export_path}: {e}[/red]")
+                    console.print("[yellow]💡 Try using a different location like ./exported_tasks.csv[/yellow]")
+                    if not Confirm.ask("Try another path?", default=True):
+                        return None
+            
+            # Get export format
+            format_type = Prompt.ask(
+                "📋 Choose export format",
+                choices=["csv", "json"],
+                default="csv"
+            )
+            
+            # Define available columns
+            all_columns = [
+                "date", "duration", "task", "description", 
+                "status", "priority", "tags", "created_at", "updated_at"
+            ]
+            
+            # Ask if user wants to select specific columns
+            if Confirm.ask("🎯 Select specific columns to export?", default=False):
+                selected_columns = self.get_column_selection(all_columns)
+                if not selected_columns:
+                    return None
+            else:
+                selected_columns = all_columns
+            
+            return {
+                "path": path.strip(),
+                "format": format_type,
+                "columns": selected_columns
+            }
+            
+        except KeyboardInterrupt:
+            return None
+    
+    def get_column_selection(self, available_columns: List[str]) -> Optional[List[str]]:
+        """Get column selection from user with interactive checkboxes"""
+        try:
+            from ..utils.navigation import NavigationMenu, MenuOption
+            
+            console.print("\n[bold yellow]📋 Select Columns to Export[/bold yellow]")
+            console.print("[dim]Use arrow keys to navigate, Space to toggle, Enter to confirm[/dim]\n")
+            
+            # Create menu options with checkboxes
+            selected_columns = set(available_columns)  # Start with all selected
+            column_descriptions = {
+                "date": "📅 Task Date",
+                "duration": "⏱️ Duration", 
+                "task": "📝 Task Name",
+                "description": "📖 Description",
+                "status": "🏷️ Status",
+                "priority": "⚡ Priority",
+                "tags": "🏷️ Tags",
+                "created_at": "🕐 Created At",
+                "updated_at": "🕑 Updated At"
+            }
+            
+            while True:
+                # Create menu options
+                menu_options = []
+                for col in available_columns:
+                    checkbox = "☑️" if col in selected_columns else "☐"
+                    description = column_descriptions.get(col, col.title())
+                    menu_options.append(MenuOption(f"{checkbox} {description}", col))
+                
+                menu_options.extend([
+                    MenuOption("", "separator"),
+                    MenuOption("✅ Select All", "select_all"),
+                    MenuOption("❌ Deselect All", "deselect_all"),
+                    MenuOption("✅ Confirm Selection", "confirm"),
+                    MenuOption("❌ Cancel", "cancel")
+                ])
+                
+                menu = NavigationMenu("Column Selection")
+                choice = menu.show_menu(menu_options)
+                
+                if choice == "confirm":
+                    if selected_columns:
+                        return list(selected_columns)
+                    else:
+                        console.print("[red]❌ Please select at least one column[/red]")
+                        continue
+                elif choice == "cancel":
+                    return None
+                elif choice == "select_all":
+                    selected_columns = set(available_columns)
+                elif choice == "deselect_all":
+                    selected_columns = set()
+                elif choice in available_columns:
+                    # Toggle column selection
+                    if choice in selected_columns:
+                        selected_columns.remove(choice)
+                    else:
+                        selected_columns.add(choice)
+                        
+        except KeyboardInterrupt:
+            return None
+    
     def get_export_path(self) -> Optional[str]:
-        """Get export file path"""
+        """Get export file path (legacy method for backward compatibility)"""
         try:
             path = Prompt.ask("📁 Enter export file path")
             return path.strip() if path.strip() else None

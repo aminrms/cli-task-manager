@@ -343,7 +343,8 @@ class TaskManager:
         
         ie_menu = NavigationMenu("Import/Export Options")
         ie_options = [
-            MenuOption("📤 Export Tasks", "export"),
+            MenuOption("📤 Export Tasks (with column selection)", "export"),
+            MenuOption("📤 Quick Export All", "export_all"),
             MenuOption("📥 Import Tasks", "import"),
             MenuOption("💾 Backup Data", "backup"),
             MenuOption("🔙 Back to Main Menu", "back")
@@ -352,10 +353,30 @@ class TaskManager:
         choice = ie_menu.show_menu(ie_options)
         
         if choice == "export":
+            export_options = self.input_handler.get_export_options()
+            if export_options:
+                success = self.data_manager.export_data(
+                    export_options["path"],
+                    export_options["format"],
+                    export_options["columns"]
+                )
+                if success:
+                    columns_info = f" ({len(export_options['columns'])} columns)" if len(export_options['columns']) < 9 else ""
+                    self.ui.show_success(f"Data exported to {export_options['path']}{columns_info}")
+                else:
+                    self.ui.show_error("Export failed")
+                    
+        elif choice == "export_all":
             path = self.input_handler.get_export_path()
             if path:
-                if self.data_manager.export_data(path):
-                    self.ui.show_success(f"Data exported to {path}")
+                # Add format selection for quick export
+                format_type = self.input_handler.get_selection(
+                    "📋 Choose export format", 
+                    ["csv", "json"], 
+                    "csv"
+                )
+                if format_type and self.data_manager.export_data(path, format_type):
+                    self.ui.show_success(f"All data exported to {path}")
                 else:
                     self.ui.show_error("Export failed")
                     
@@ -378,3 +399,13 @@ class TaskManager:
         """Exit application"""
         self.ui.show_info("Thanks for using Task CLI Manager!")
         self.running = False
+
+
+def main():
+    """Main entry point for the application"""
+    app = TaskManager()
+    app.run()
+
+
+if __name__ == "__main__":
+    main()

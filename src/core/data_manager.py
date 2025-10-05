@@ -236,18 +236,61 @@ class DataManager:
         """Get tasks by priority"""
         return self.filter_tasks("priority", priority)
     
-    def export_data(self, export_path: str, format_type: str = "csv") -> bool:
-        """Export data to different formats"""
+    def export_data(self, export_path: str, format_type: str = "csv", selected_columns: List[str] = None) -> bool:
+        """Export data to different formats with optional column selection"""
         try:
             export_path = Path(export_path)
+            
+            # Ensure parent directory exists
+            export_path.parent.mkdir(parents=True, exist_ok=True)
+            
             tasks = self.load_tasks()
             
+            # Default columns if none specified
+            all_columns = [
+                "date", "duration", "task", "description", 
+                "status", "priority", "tags", "created_at", "updated_at"
+            ]
+            
+            if selected_columns is None:
+                selected_columns = all_columns
+            
             if format_type.lower() == "csv":
-                shutil.copy2(self.csv_file, export_path)
+                # If all columns selected, just copy the file
+                if set(selected_columns) == set(all_columns):
+                    shutil.copy2(self.csv_file, export_path)
+                else:
+                    # Export only selected columns
+                    with open(export_path, 'w', newline='', encoding='utf-8') as file:
+                        writer = csv.DictWriter(file, fieldnames=selected_columns)
+                        writer.writeheader()
+                        
+                        for task in tasks:
+                            row_data = task.to_csv_row()
+                            # Add metadata fields
+                            row_data.update({
+                                'created_at': task.created_at or '',
+                                'updated_at': task.updated_at or ''
+                            })
+                            
+                            # Filter to selected columns only
+                            filtered_row = {col: row_data.get(col, '') for col in selected_columns}
+                            writer.writerow(filtered_row)
+                            
             elif format_type.lower() == "json":
                 import json
+                task_dicts = []
+                for task in tasks:
+                    task_dict = task.to_dict()
+                    # Filter to selected columns only
+                    if selected_columns != all_columns:
+                        filtered_dict = {col: task_dict.get(col, '') for col in selected_columns}
+                        task_dicts.append(filtered_dict)
+                    else:
+                        task_dicts.append(task_dict)
+                
                 with open(export_path, 'w', encoding='utf-8') as f:
-                    json.dump([task.to_dict() for task in tasks], f, indent=2, ensure_ascii=False)
+                    json.dump(task_dicts, f, indent=2, ensure_ascii=False)
             
             return True
         except Exception as e:

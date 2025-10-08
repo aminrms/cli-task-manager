@@ -93,6 +93,10 @@ class UIManager:
             )
         
         console.print(table)
+        
+        # Calculate and show total duration
+        total_hours = sum(task.get_duration_in_hours() for task in tasks)
+        console.print(f"[bold green]⏱️ Total Duration: {total_hours} hours[/bold green]")
         console.print(f"[dim]Total tasks: {len(tasks)}[/dim]")
     
     def show_task_details(self, task: Task, title: str = "Task Details"):

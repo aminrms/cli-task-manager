@@ -8,6 +8,7 @@ Supports Jalali date system and stores tasks in custom CSV location
 import csv
 import os
 import sys
+import re
 import jdatetime
 from datetime import datetime
 from rich.console import Console
@@ -24,6 +25,47 @@ console = Console()
 
 # Store CSV file in F:\Sepano-Project with Persian name
 CSV_FILE = r"F:\Sepano-Project\تایم های کاری.csv"
+
+def parse_duration_to_minutes(duration_str):
+    """Parse duration string to minutes (e.g., '2h', '30min', '1h 30min')"""
+    if not duration_str:
+        return 60  # Default 1 hour
+    
+    total_minutes = 0
+    duration_str = duration_str.lower().strip()
+    
+    # Handle formats like '2h', '30min', '1h 30min', '45m'
+    # Find hours
+    hours_match = re.search(r'(\d+)h', duration_str)
+    if hours_match:
+        total_minutes += int(hours_match.group(1)) * 60
+    
+    # Find minutes
+    minutes_match = re.search(r'(\d+)(?:min|m)(?!h)', duration_str)
+    if minutes_match:
+        total_minutes += int(minutes_match.group(1))
+    
+    # If no format found, assume it's hours
+    if total_minutes == 0:
+        try:
+            total_minutes = float(duration_str) * 60
+        except ValueError:
+            total_minutes = 60  # Default 1 hour
+    
+    return total_minutes
+
+def calculate_total_duration(tasks):
+    """Calculate total duration of all tasks in hours"""
+    total_minutes = 0
+    
+    for task in tasks:
+        duration_key = "duration" if "duration" in task else "hour"
+        duration_str = task.get(duration_key, "1h")
+        total_minutes += parse_duration_to_minutes(duration_str)
+    
+    # Convert to hours with 2 decimal places
+    total_hours = total_minutes / 60
+    return round(total_hours, 2)
 
 def get_key():
     """Get a single keypress from user"""
@@ -285,6 +327,10 @@ def list_tasks(filter_date=None, search_term=None):
             )
 
         console.print(table)
+        
+        # Calculate and show total duration
+        total_hours = calculate_total_duration(filtered_tasks)
+        console.print(f"[bold green]⏱️ Total Duration: {total_hours} hours[/bold green]")
         
         # Show filter info if applied
         filter_info = []

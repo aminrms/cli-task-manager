@@ -139,6 +139,39 @@ class Task:
         except (ValueError, AttributeError):
             return self.date
     
+    def get_duration_in_minutes(self) -> int:
+        """Parse duration string to minutes"""
+        import re
+        
+        if not self.duration:
+            return 60  # Default 1 hour
+        
+        total_minutes = 0
+        duration_str = self.duration.lower().strip()
+        
+        # Find hours
+        hours_match = re.search(r'(\d+)h', duration_str)
+        if hours_match:
+            total_minutes += int(hours_match.group(1)) * 60
+        
+        # Find minutes
+        minutes_match = re.search(r'(\d+)(?:min|m)(?!h)', duration_str)
+        if minutes_match:
+            total_minutes += int(minutes_match.group(1))
+        
+        # If no format found, assume it's hours
+        if total_minutes == 0:
+            try:
+                total_minutes = float(duration_str) * 60
+            except ValueError:
+                total_minutes = 60  # Default 1 hour
+        
+        return total_minutes
+    
+    def get_duration_in_hours(self) -> float:
+        """Get duration in hours as float"""
+        return round(self.get_duration_in_minutes() / 60, 2)
+    
     def update(self, **kwargs):
         """Update task fields"""
         for key, value in kwargs.items():
